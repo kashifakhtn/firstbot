@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IT GenieBot</title>
+    <style>
+        :root {
+            --primary-color: #5598fd;
+        }
+        
+        body {
+            background-image: url('../img/hclBG.png');
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            margin: 0;
+            overflow: hidden;
+        }
+
+        .chat-container {
+            max-width: 700px;
+            height: 600px;
+            margin: auto;
+            margin-right: 370px;
+            padding: 15px;
+            background-color: #ac8e8e;
+            border-radius: 15px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            display: flex;
+            flex-direction: column;
+            margin-top: 0;
+        }
+
+        .chat-box {
+            height: 100%;
+            overflow-y: auto;
+            padding: 10px;
+            background-color: #ffffff;
+            border: 1px solid #ddd;
+            border-radius: 10px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        }
+
+        .input-container {
+            display: flex;
+            margin-top: 10px;
+            align-items: flex-start;
+            width: 100%;
+        }
+
+        .input-container textarea {
+            width: 100%;
+            flex: 1;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 14px;
+            outline: none;
+            min-height: 50px;
+            max-height: 300px;
+            overflow-y: auto;
+            resize: vertical;
+            line-height: 1.5;
+        }
+
+        .input-container button {
+            background-color: #007bff;
+            color: #ffffff;
+            border: none;
+            border-radius: 5px;
+            padding: 8px 12px;
+            margin-left: 10px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background-color 0.2s ease;
+        }
+
+        .input-container button:hover {
+            background-color: #0056b3;
+        }
+
+        .bot-message {
+            background-color: #cdf9ff;
+            padding: 10px;
+            margin-bottom: 10px;
+            border-radius: 10px;
+        }
+
+        .user-message {
+            background-color: #e6ffe6;
+            padding: 10px;
+            margin-bottom: 10px;
+            border-radius: 10px;
+        }
+
+        .typing-indicator {
+            font-style: italic;
+            color: #aaa;
+        }
+
+        @media screen and (max-width: 480px) {
+            .chat-container {
+                max-width: 100%;
+                margin-right: 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <h1 style="color: black; text-align: center; font-size: 60px; margin-bottom:0; margin-top:0;">IT GenieBot</h1>
+    <hr style="width: 100%; border: 4px solid #b98d8587;">
+    
+    <div class="chat-container">
+        <div class="chat-box" id="chat-box"></div>
+        <div class="input-container">
+            <textarea id="user-input" placeholder="Type your message..."></textarea>
+            <button onclick="sendMessage()">Send</button>
+        </div>
+    </div>
+
+    <script src="https://cdn.botpress.cloud/webchat/v2.3/inject.js"></script>
+    <script>
+        const chatBox = document.getElementById("chat-box");
+        const userInput = document.getElementById("user-input");
+        let lastConversationTimestamp = 0;
+
+        function getNewConversationId() {
+            return `conv_${Date.now()}`;
+        }
+
+        // Initialize Botpress webchat
+        async function initializeBotpress() {
+            lastConversationTimestamp = Date.now();
+            
+            window.botpressWebChat.init({
+                "composerPlaceholder": "Type your message...",
+                "botConversationDescription": "IT Support Bot",
+                "botId": "822a9a94-2b34-4362-b606-8fe53250dcc2",
+                "hostUrl": "https://cdn.botpress.cloud/webchat/v2.3",
+                "messagingUrl": "https://messaging.botpress.cloud",
+                "clientId": "822a9a94-2b34-4362-b606-8fe53250dcc2",
+                "webhookId": "20250126112612-F21YX6LY",
+                "conversationId": getNewConversationId(),
+                "userId": `user_${Date.now()}`,
+                "enableReset": true,
+                "hideWidget": true  // Hide the default widget since we're using our own UI
+            });
+
+            appendMessage("Hello! How can I assist you today?", false);
+        }
+
+        // Send message to Botpress
+        async function sendMessage() {
+            const message = userInput.value.trim();
+            if (message !== "") {
+                appendMessage(message, true);
+                userInput.value = "";
+                showTypingIndicator();
+
+                try {
+                    // Send message to Botpress
+                    await window.botpressWebChat.sendEvent({
+                        type: 'text',
+                        text: message
+                    });
+                } catch (error) {
+                    console.error('Error sending message:', error);
+                    appendMessage("Sorry, I couldn't process your message. Please try again.", false);
+                    removeTypingIndicator();
+                }
+            }
+        }
+
+        function appendMessage(message, isUser) {
+            const messageElement = document.createElement("div");
+            messageElement.classList.add("message");
+            messageElement.classList.add(isUser ? "user-message" : "bot-message");
+            messageElement.innerText = message;
+            chatBox.appendChild(messageElement);
+            chatBox.scrollTop = chatBox.scrollHeight;
+        }
+
+        function showTypingIndicator() {
+            const typingIndicator = document.createElement("div");
+            typingIndicator.classList.add("typing-indicator");
+            typingIndicator.innerText = "Bot is typing...";
+            chatBox.appendChild(typingIndicator);
+            chatBox.scrollTop = chatBox.scrollHeight;
+        }
+
+        function removeTypingIndicator() {
+            const typingIndicator = chatBox.querySelector('.typing-indicator');
+            if (typingIndicator) {
+                chatBox.removeChild(typingIndicator);
+            }
+        }
+
+        // Listen for messages from Botpress
+        window.addEventListener('message', (message) => {
+            if (message.data.type === 'message' && message.data.payload) {
+                removeTypingIndicator();
+                const response = message.data.payload;
+                if (response.type === 'text') {
+                    appendMessage(response.text, false);
+                }
+            }
+        });
+
+        // Handle enter key
+        userInput.addEventListener('keydown', function(event) {
+            if (event.key === 'Enter' && !event.shiftKey) {
+                event.preventDefault();
+                sendMessage();
+            }
+        });
+
+        // Initialize when the page loads
+        document.addEventListener('DOMContentLoaded', initializeBotpress);
+    </script>
+</body>
+</html>
